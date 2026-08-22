@@ -22,14 +22,35 @@ import { applyLang, currentLang, t } from './i18n.js';
 const FORM_ENDPOINT = 'https://formspree.io/f/xdenjjyq';
 const ENDPOINT_IS_PLACEHOLDER = FORM_ENDPOINT.includes('YOUR_FORM_ID');
 
-const VIDEOS = {
-  v1: 'assets/videos/main_bg_scrub.mp4',
-  v2: 'assets/videos/castle_scrub.mp4',
-  v3: 'assets/videos/cave_loop.mp4',
-  v4: 'assets/videos/Warior group.mp4',
-  vSky: 'assets/videos/Background.mp4',
-  vDragon: 'assets/videos/A massive black dragon.mp4'
+const VIDEO_FILES = {
+  v1: 'main_bg_scrub.mp4',
+  v2: 'castle_scrub.mp4',
+  v3: 'cave_loop.mp4',
+  v4: 'Warior group.mp4',
+  vSky: 'Background.mp4',
+  vDragon: 'A massive black dragon.mp4'
 };
+
+/* Touch devices get 9:16 variants. `object-fit: cover` on a portrait phone
+   throws away about 70% of a 16:9 frame — the dragon's wings, the castle
+   silhouette, the warrior line-up all fall outside the viewport. The portrait
+   files carry the full frame in a sharp centre band with a blurred, darkened
+   extension filling the rest, so the screen stays full-bleed and nothing is
+   lost. They are also ~45% lighter, which matters more on a phone.
+
+   The geometry holds in landscape too: cropping a 720x1280 file with `cover`
+   into a landscape phone viewport lands exactly on the sharp band. */
+const screenMin = Math.min(
+  window.screen?.width || window.innerWidth,
+  window.screen?.height || window.innerHeight
+);
+const usePortraitMedia =
+  window.matchMedia('(pointer: coarse)').matches && screenMin <= 820;
+
+const VIDEO_DIR = usePortraitMedia ? 'assets/videos/portrait/' : 'assets/videos/';
+const VIDEOS = Object.fromEntries(
+  Object.entries(VIDEO_FILES).map(([id, file]) => [id, VIDEO_DIR + file])
+);
 
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (sel) => document.querySelector(sel);
@@ -43,6 +64,7 @@ for (const [id, path] of Object.entries(VIDEOS)) {
 }
 
 const scrubVideos = ['v1', 'v2', 'v3', 'v4'].map((id) => document.getElementById(id));
+if (usePortraitMedia) document.getElementById('v1').poster = 'assets/images/poster_hero_portrait.jpg';
 const skyVideo = $('#vSky');
 const dragonVideo = $('#vDragon');
 
@@ -155,6 +177,7 @@ stage.start();
 
 function jumpTo(key) {
   const y = stage.targets[key] ?? 0;
+  muteSnap(1800);
   if (lenis) lenis.scrollTo(y, { duration: 1.5, easing: (x) => 1 - Math.pow(1 - x, 3) });
   else window.scrollTo({ top: y, behavior: 'smooth' });
 }
@@ -165,6 +188,79 @@ for (const el of document.querySelectorAll('[data-jump]')) {
     jumpTo(el.dataset.jump);
   });
 }
+
+/* ══════════════ 3b. scroll stations ══════════════
+
+   The film scrubs freely while a finger or wheel is actually moving, but a
+   gesture always comes to rest on a station — a frame where a scene's copy is
+   fully readable, or a key visual beat. One gesture advances at most one
+   station, so no amount of flick force can throw the reader past a block of
+   text. Inside the contact section the page scrolls like any normal page.     */
+
+const SETTLE_THRESHOLD = 0.14;   // share of the gap that counts as "moved on"
+const GESTURE_IDLE = 160;        // ms of quiet that ends a gesture
+
+let anchorStation = null;
+let idleTimer = null;
+let snapMutedUntil = 0;
+
+function muteSnap(ms) {
+  anchorStation = null;
+  clearTimeout(idleTimer);
+  snapMutedUntil = performance.now() + ms;
+}
+
+function beginGesture() {
+  if (document.body.classList.contains('is-loading')) return;
+  if (!dragonOverlay.hidden) return;
+  if (performance.now() < snapMutedUntil) return;
+
+  if (anchorStation === null) {
+    const y = window.scrollY;
+    const last = stage.stations[stage.stations.length - 1];
+    anchorStation = y > last + 8 ? -1 : stage.nearestStation(y);
+  }
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(settleToStation, GESTURE_IDLE);
+}
+
+function settleToStation() {
+  const index = anchorStation;
+  anchorStation = null;
+  if (index === null || index < 0) return;
+
+  const stations = stage.stations;
+  const from = stations[index];
+  const drift = window.scrollY - from;
+  let target = index;
+
+  if (drift !== 0) {
+    const step = drift > 0 ? 1 : -1;
+    const next = stations[index + step];
+    if (next !== undefined && Math.abs(drift) / Math.abs(next - from) > SETTLE_THRESHOLD) {
+      target = index + step;
+    }
+  }
+  glideTo(stations[target]);
+}
+
+function glideTo(y) {
+  const distance = Math.abs(window.scrollY - y);
+  if (distance < 2) return;
+  snapMutedUntil = performance.now() + 90;
+  const duration = Math.min(1.9, Math.max(0.55, distance / 1500));
+  if (lenis) lenis.scrollTo(y, { duration, easing: (x) => 1 - Math.pow(1 - x, 3) });
+  else window.scrollTo({ top: y, behavior: 'smooth' });
+}
+
+for (const evt of ['wheel', 'touchstart', 'touchmove', 'touchend']) {
+  window.addEventListener(evt, beginGesture, { passive: true });
+}
+window.addEventListener('keydown', (event) => {
+  if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) {
+    beginGesture();
+  }
+});
 
 /* ══════════════ 4. language ══════════════ */
 

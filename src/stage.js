@@ -32,11 +32,14 @@ const EXIT_VH = 1.0;
 
 export function createStage() {
   const scenes = [
-    { key: 's1', video: document.getElementById('v1'), layer: document.getElementById('layer1'), dur: 11.041667, vh: 2.6, crossPrevSec: 0 },
-    { key: 's2', video: document.getElementById('v2'), layer: document.getElementById('layer2'), dur: 11.041667, vh: 2.6, crossPrevSec: 2.0 },
-    { key: 's3', video: document.getElementById('v3'), layer: document.getElementById('layer3'), dur: 24.0,      vh: 6.0, crossPrevSec: 2.0 },
+    // `stops` are the video times a scroll gesture is allowed to settle on:
+    // the moments where a scene's copy is fully readable, plus its key visual
+    // beats. Nothing ever comes to rest between two of them.
+    { key: 's1', video: document.getElementById('v1'), layer: document.getElementById('layer1'), dur: 11.041667, vh: 2.6, crossPrevSec: 0,   stops: [0, 3.4, 10.6] },
+    { key: 's2', video: document.getElementById('v2'), layer: document.getElementById('layer2'), dur: 11.041667, vh: 2.6, crossPrevSec: 2.0, stops: [4.5, 9.6] },
+    { key: 's3', video: document.getElementById('v3'), layer: document.getElementById('layer3'), dur: 24.0,      vh: 6.0, crossPrevSec: 2.0, stops: [6, 18] },
     // Spec: this crossfade is pinned to cave t=21s→24s, the last 3s of scene 3.
-    { key: 's4', video: document.getElementById('v4'), layer: document.getElementById('layer4'), dur: 11.041667, vh: 3.0, crossPrevSec: 3.0 }
+    { key: 's4', video: document.getElementById('v4'), layer: document.getElementById('layer4'), dur: 11.041667, vh: 3.0, crossPrevSec: 3.0, stops: [5.5, 10.8] }
   ];
 
   const stageEl = document.getElementById('stage');
@@ -66,6 +69,8 @@ export function createStage() {
 
   const geo = { exitStart: 0, exitLen: 1, scrollable: 1 };
   const targets = { top: 0, services: 0, work: 0, team: 0, contact: 0 };
+  /** Scroll offsets a gesture may settle on, ascending. */
+  const stations = [];
 
   let scrollY = 0;
   let dirty = true;
@@ -107,7 +112,26 @@ export function createStage() {
     targets.contact = Math.round(contactEl.offsetTop);
 
     geo.scrollable = Math.max(1, document.documentElement.scrollHeight - H);
+
+    stations.length = 0;
+    for (const s of scenes) {
+      for (const t of s.stops) stations.push(Math.round(s.start + (t / s.dur) * s.len));
+    }
+    stations.push(targets.contact);
+    stations.sort((a, b) => a - b);
+
     dirty = true;
+  }
+
+  /** Index of the station closest to a scroll offset. */
+  function nearestStation(y) {
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < stations.length; i++) {
+      const d = Math.abs(stations[i] - y);
+      if (d < bestDist) { bestDist = d; best = i; }
+    }
+    return best;
   }
 
   /* ── per-frame video seeking ──────────────────────────── */
@@ -216,5 +240,8 @@ export function createStage() {
     if (document.fonts) document.fonts.ready.then(onResize);
   }
 
-  return { start, layout, setScroll, targets, scenes, invalidate: () => { dirty = true; } };
+  return {
+    start, layout, setScroll, targets, scenes, stations, nearestStation,
+    invalidate: () => { dirty = true; }
+  };
 }
