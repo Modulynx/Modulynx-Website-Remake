@@ -36,6 +36,9 @@ npm run preview   # serve the production build locally
 GitHub Pages or any static host. `base: './'` in `vite.config.js` keeps it
 working from a sub-path, so a GitHub Pages project URL needs no rebuild.
 
+Netlify picks up `netlify.toml` automatically: build `npm run build`, publish
+`dist`, Node 22, plus long-lived cache headers for the video.
+
 ---
 
 ## How the scroll engine works

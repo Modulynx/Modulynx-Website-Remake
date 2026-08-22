@@ -1,0 +1,37 @@
+# Netlify build configuration.
+# Keeping this in the repo means the deploy settings travel with the code
+# instead of living only in the dashboard UI.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 requires Node ^20.19.0 || >=22.12.0
+  NODE_VERSION = "22"
+
+# ── caching ──────────────────────────────────────────────────────────
+# Vite fingerprints the bundle, so those filenames change on every build.
+[[headers]]
+  for = "/assets/index-*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The story clips are ~51 MB in total and are the whole experience.
+# A long cache keeps repeat visits instant and bandwidth down. Their
+# filenames are stable, so shorten this window before re-encoding them.
+[[headers]]
+  for = "/assets/videos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+[[headers]]
+  for = "/assets/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+# Single entry document — always revalidate so a new deploy is picked up.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
