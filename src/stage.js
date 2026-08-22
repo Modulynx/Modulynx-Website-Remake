@@ -1,0 +1,220 @@
+/* ═══════════════════════════════════════════════════════════
+   stage.js — the scroll-driven film engine
+
+   Model
+   ─────
+   A single fixed "stage" holds every scroll-driven video layer.
+   The document itself contains only empty spacers whose heights
+   define how much scroll distance each scene owns, plus the real
+   contact section at the end.
+
+   One rAF loop maps the (smoothed) scroll position onto:
+     • video.currentTime      — frame scrubbing, never play()
+     • layer opacity          — crossfades between scenes
+     • overlay text opacity   — tied to the VIDEO's currentTime,
+                                so text mirrors the scroll exactly
+                                in both directions.
+
+   Nothing here reads layout inside a scroll handler: the scroll
+   value is cached from the scroll event, geometry is measured
+   once per layout pass (load / resize).
+   ═══════════════════════════════════════════════════════════ */
+
+const clamp01 = (n) => (n < 0 ? 0 : n > 1 ? 1 : n);
+const ramp = (v, from, to) => (to === from ? (v >= to ? 1 : 0) : clamp01((v - from) / (to - from)));
+
+/** How long (in video seconds) a staggered element takes to fade in. */
+const RISE = 0.6;
+/** Vertical travel of a staggered element, in px. */
+const RISE_Y = 16;
+/** Scroll distance (in viewport heights) used to fade the stage out into the sky. */
+const EXIT_VH = 1.0;
+
+export function createStage() {
+  const scenes = [
+    { key: 's1', video: document.getElementById('v1'), layer: document.getElementById('layer1'), dur: 11.041667, vh: 2.6, crossPrevSec: 0 },
+    { key: 's2', video: document.getElementById('v2'), layer: document.getElementById('layer2'), dur: 11.041667, vh: 2.6, crossPrevSec: 2.0 },
+    { key: 's3', video: document.getElementById('v3'), layer: document.getElementById('layer3'), dur: 24.0,      vh: 6.0, crossPrevSec: 2.0 },
+    // Spec: this crossfade is pinned to cave t=21s→24s, the last 3s of scene 3.
+    { key: 's4', video: document.getElementById('v4'), layer: document.getElementById('layer4'), dur: 11.041667, vh: 3.0, crossPrevSec: 3.0 }
+  ];
+
+  const stageEl = document.getElementById('stage');
+  const spacers = [...document.querySelectorAll('.spacer')];
+  const contactEl = document.getElementById('contact');
+  const progressBar = document.getElementById('progressBar');
+  const headerEl = document.getElementById('header');
+
+  // Overlays, pre-parsed once so the frame loop stays allocation-free.
+  const overlays = [...document.querySelectorAll('.ov')].map((el) => {
+    const items = [...el.querySelectorAll('[data-in]')].map((node) => ({
+      node,
+      in: parseFloat(node.dataset.in)
+    }));
+    return {
+      el,
+      scene: parseInt(el.dataset.scene, 10),
+      out: parseFloat(el.dataset.out),
+      outEnd: parseFloat(el.dataset.outEnd),
+      minIn: items.length ? Math.min(...items.map((i) => i.in)) : 0,
+      // Spec: the cave panels fade over 0.5s; everything else uses RISE.
+      rise: parseFloat(el.dataset.rise) || RISE,
+      items,
+      on: false
+    };
+  });
+
+  const geo = { exitStart: 0, exitLen: 1, scrollable: 1 };
+  const targets = { top: 0, services: 0, work: 0, team: 0, contact: 0 };
+
+  let scrollY = 0;
+  let dirty = true;
+
+  /* ── geometry ─────────────────────────────────────────── */
+
+  function layout() {
+    const H = window.innerHeight;
+    // A hidden/zero-height viewport (background tab, pane not yet composited)
+    // would collapse every scene to zero length and saturate the whole timeline.
+    if (H < 1) { requestAnimationFrame(layout); return; }
+    let acc = 0;
+
+    scenes.forEach((s, i) => {
+      s.len = Math.round(s.vh * H);
+      s.start = acc;
+      s.end = acc + s.len;
+      const prev = scenes[i - 1];
+      // Crossfade length is expressed in seconds of the PREVIOUS video,
+      // converted into scroll pixels of that scene.
+      s.crossLen = prev ? Math.max(1, (s.crossPrevSec / prev.dur) * prev.len) : 0;
+      acc = s.end;
+    });
+
+    geo.exitStart = acc;
+    geo.exitLen = Math.round(EXIT_VH * H);
+
+    spacers.forEach((el, i) => {
+      const extra = i === scenes.length - 1 ? geo.exitLen : 0;
+      el.style.height = `${scenes[i].len + extra}px`;
+    });
+
+    const s3 = scenes[2];
+    const s4 = scenes[3];
+    targets.top = 0;
+    targets.services = Math.round(s3.start + (6 / s3.dur) * s3.len);   // services panel visible at cave t=6s
+    targets.work = Math.round(s3.start + (18 / s3.dur) * s3.len);      // work panel visible at cave t=18s
+    targets.team = Math.round(s4.start + (5 / s4.dur) * s4.len);       // team text visible at warriors t=5s
+    targets.contact = Math.round(contactEl.offsetTop);
+
+    geo.scrollable = Math.max(1, document.documentElement.scrollHeight - H);
+    dirty = true;
+  }
+
+  /* ── per-frame video seeking ──────────────────────────── */
+
+  function seek(video, time) {
+    if (video.readyState < 1) return;
+    // Skip sub-frame corrections and pile-ups while a seek is in flight.
+    const delta = Math.abs(video.currentTime - time);
+    if (delta < 0.01) return;
+    if (video.seeking && delta < 0.06) return;
+    video.currentTime = time;
+  }
+
+  /* ── the frame ────────────────────────────────────────── */
+
+  function render() {
+    const y = scrollY;
+
+    // 1. progress + header chrome
+    progressBar.style.width = `${clamp01(y / geo.scrollable) * 100}%`;
+    headerEl.classList.toggle('is-stuck', y > 40);
+
+    // 2. stage exit — layers 1-4 dissolve, revealing the looping sky behind
+    const stageAlpha = 1 - ramp(y, geo.exitStart, geo.exitStart + geo.exitLen);
+    stageEl.style.opacity = stageAlpha;
+    stageEl.style.visibility = stageAlpha < 0.002 ? 'hidden' : 'visible';
+
+    // 3. scene progress + layer crossfades
+    for (let i = 0; i < scenes.length; i++) {
+      const s = scenes[i];
+      s.p = clamp01((y - s.start) / s.len);
+      s.alpha = i === 0 ? 1 : ramp(y, s.start - s.crossLen, s.start);
+      if (i > 0) s.layer.style.opacity = s.alpha;
+    }
+
+    // 4. scrub — only for layers actually contributing pixels
+    if (stageAlpha > 0.002) {
+      for (let i = 0; i < scenes.length; i++) {
+        const s = scenes[i];
+        const next = scenes[i + 1];
+        const covered = next ? next.alpha > 0.999 : false;
+        if (s.alpha > 0.002 && !covered) {
+          seek(s.video, Math.min(s.p * s.dur, s.dur - 0.02));
+        }
+      }
+    }
+
+    // 5. overlay text — driven by each scene's video currentTime
+    for (const ov of overlays) {
+      const s = scenes[ov.scene];
+      const t = s.p * s.dur;
+      const alpha = (1 - ramp(t, ov.out, ov.outEnd)) * stageAlpha;
+      const on = alpha > 0.002 && t >= ov.minIn - 0.05;
+
+      if (on !== ov.on) {
+        ov.el.classList.toggle('is-on', on);
+        ov.on = on;
+      }
+      if (!on) continue;
+
+      ov.el.style.opacity = alpha;
+      for (const item of ov.items) {
+        const a = ramp(t, item.in, item.in + ov.rise);
+        item.node.style.opacity = a;
+        item.node.style.transform = a === 1 ? 'none' : `translate3d(0, ${(1 - a) * RISE_Y}px, 0)`;
+      }
+    }
+  }
+
+  function frame() {
+    if (dirty) {
+      dirty = false;
+      render();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── wiring ───────────────────────────────────────────── */
+
+  function setScroll(value) {
+    if (value === scrollY) return;
+    scrollY = value;
+    dirty = true;
+  }
+
+  function start() {
+    layout();
+    setScroll(window.scrollY);
+    render();
+    requestAnimationFrame(frame);
+
+    let resizeTimer;
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        layout();
+        setScroll(window.scrollY);
+      }, 120);
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+
+    // The contact section is content-sized; its height changes with fonts,
+    // language and validation messages — all of which move `targets.contact`.
+    if ('ResizeObserver' in window) new ResizeObserver(onResize).observe(contactEl);
+    if (document.fonts) document.fonts.ready.then(onResize);
+  }
+
+  return { start, layout, setScroll, targets, scenes, invalidate: () => { dirty = true; } };
+}

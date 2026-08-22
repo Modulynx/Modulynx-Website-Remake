@@ -1,0 +1,10 @@
+# Normalise text to LF in the repository and on checkout, so the project
+# hashes identically on Windows, macOS and Linux.
+* text=auto eol=lf
+
+# Media is binary — never diff, never touch line endings.
+*.mp4 binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.webp binary

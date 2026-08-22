@@ -1,0 +1,21 @@
+# ── dependencies ──
+node_modules/
+
+# ── build output ──
+dist/
+
+# ── unprocessed video masters ──
+# The raw clips before the encode pass. Kept locally: large, and fully
+# redundant with the optimised files that ship.
+assets/videos/_originals/
+
+# ── editors / OS ──
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── logs ──
+*.log
+npm-debug.log*
