@@ -700,26 +700,21 @@ html[lang='ar'] .field label { font-family: var(--font-body); font-size: 0.9rem;
 html[lang='ar'] .foot { font-family: var(--font-body); }
 .foot__sep { opacity: 0.4; }
 
+/* Reads as part of the footer line rather than a button parked beside it:
+   same size and colour as the copyright, with padding for a tap target that
+   is comfortable without drawing a box around it. */
 .foot__link {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 32px;
-  padding: 0.25rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--silver);
+  gap: 0.3rem;
+  padding: 0.4rem 0.15rem;
+  color: inherit;
   text-decoration: none;
-  transition: color var(--t-fast) var(--ease),
-              border-color var(--t-fast) var(--ease),
-              background var(--t-fast) var(--ease);
+  transition: color var(--t-fast) var(--ease);
 }
-.foot__link:hover {
-  color: var(--ink);
-  border-color: var(--line-strong);
-  background: rgba(255, 255, 255, 0.06);
-}
-.foot__link svg { opacity: 0.75; }
+.foot__link:hover { color: var(--ink); }
+.foot__link svg { opacity: 0.7; }
+.foot__link:hover svg { opacity: 1; }
 
 /* ══════════════════ DRAGON OVERLAY (scene 6) ══════════════════ */
 
@@ -820,6 +815,10 @@ html[lang='ar'] .foot { font-family: var(--font-body); }
 @media (max-width: 420px) {
   .nav { gap: 0.1rem; min-width: 0; }
   .nav__link { padding: 0.6rem 0.35rem; font-size: 0.76rem; }
+  /* The tracked uppercase eyebrow is the widest short string on the page;
+     easing the tracking keeps "Strategy Makes the Difference" on one line
+     instead of dropping its last word onto a line of its own. */
+  .eyebrow { letter-spacing: 0.14em; }
   .nav__cta { padding: 0.5rem 0.8rem; font-size: 0.78rem; }
   .lang { min-width: 42px; padding: 0.4rem 0.5rem; }
   .panel { padding: 1.2rem 1.1rem; }
@@ -896,7 +895,7 @@ html[lang='ar'] .foot { font-family: var(--font-body); }
   .contact__title { font-size: clamp(1.35rem, 6.6vw, 1.9rem); }
   .contact__sub { font-size: 0.8rem; line-height: 1.45; }
   .field textarea { height: 48px; min-height: 48px; }
-  .foot > span:not(:first-child) { display: none; }
+  .foot__tag, .foot__tag ~ .foot__sep { display: none; }
   .foot__sep { display: none; }
 }
 
