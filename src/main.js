@@ -334,7 +334,9 @@ function glideTo(y) {
   const distance = Math.abs(window.scrollY - y);
   if (distance < 2) return;
   snapMutedUntil = performance.now() + 90;
-  const duration = Math.min(1.1, Math.max(0.4, distance / 1800));
+  // Short text beats snap; long passages between scenes get time to play as
+  // a shot rather than a jump cut.
+  const duration = Math.min(1.6, Math.max(0.45, distance / 1900));
   if (lenis) lenis.scrollTo(y, { duration, easing: (x) => 1 - Math.pow(1 - x, 3) });
   else window.scrollTo({ top: y, behavior: 'smooth' });
 }

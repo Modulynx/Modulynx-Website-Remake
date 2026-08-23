@@ -39,7 +39,7 @@ export function createStage() {
     { key: 's2', video: document.getElementById('v2'), layer: document.getElementById('layer2'), dur: 11.041667, vh: 2.6, crossPrevSec: 2.0, stops: [6, 9.4] },
     { key: 's3', video: document.getElementById('v3'), layer: document.getElementById('layer3'), dur: 24.0,      vh: 6.0, crossPrevSec: 2.0, stops: [1.2, 6, 18] },
     // Spec: this crossfade is pinned to cave t=21s→24s, the last 3s of scene 3.
-    { key: 's4', video: document.getElementById('v4'), layer: document.getElementById('layer4'), dur: 11.041667, vh: 3.0, crossPrevSec: 3.0, stops: [5.5, 8.0] }
+    { key: 's4', video: document.getElementById('v4'), layer: document.getElementById('layer4'), dur: 11.041667, vh: 3.0, crossPrevSec: 3.0, stops: [8.0] }
   ];
 
   const stageEl = document.getElementById('stage');
@@ -106,9 +106,9 @@ export function createStage() {
     const s3 = scenes[2];
     const s4 = scenes[3];
     targets.top = 0;
-    targets.services = Math.round(s3.start + (6 / s3.dur) * s3.len);   // services panel visible at cave t=6s
-    targets.work = Math.round(s3.start + (18 / s3.dur) * s3.len);      // work panel visible at cave t=18s
-    targets.team = Math.round(s4.start + (5 / s4.dur) * s4.len);       // team text visible at warriors t=5s
+    targets.services = Math.round(s3.start + (6 / s3.dur) * s3.len);   // services panel, cave t=6s
+    targets.work = Math.round(s3.start + (18 / s3.dur) * s3.len);      // work panel, cave t=18s
+    targets.team = Math.round(s4.start + (8 / s4.dur) * s4.len);       // warriors closing in, team copy up
     targets.contact = Math.round(contactEl.offsetTop);
 
     geo.scrollable = Math.max(1, document.documentElement.scrollHeight - H);
@@ -119,6 +119,12 @@ export function createStage() {
     }
     stations.push(targets.contact);
     stations.sort((a, b) => a - b);
+
+    // A nav jump must land on a station, not beside one — otherwise the next
+    // gesture anchors somewhere the reader never chose.
+    for (const key of Object.keys(targets)) {
+      targets[key] = stations[nearestStation(targets[key])];
+    }
 
     dirty = true;
   }
