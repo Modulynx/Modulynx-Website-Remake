@@ -103,6 +103,15 @@ export function createStage() {
       el.style.height = `${scenes[i].len + extra}px`;
     });
 
+    /* The contact section has to be at least a full viewport tall, or the page
+       cannot scroll far enough to put its top at the top of the screen and a
+       jump there clamps to the end of the document — landing on the footer.
+       CSS says 100svh, which is the viewport with the browser's toolbars
+       showing; Safari retracts them as you scroll and the viewport grows past
+       it. Pinning it here, in pixels from the live viewport on every layout
+       pass, holds whatever the toolbars are doing. */
+    contactEl.style.minHeight = `${H}px`;
+
     const s3 = scenes[2];
     const s4 = scenes[3];
     targets.top = 0;

@@ -205,11 +205,26 @@ window.addEventListener('pageshow', () => { stage.layout(); stage.setScroll(wind
 
 stage.start();
 
+/* iOS moves the goalposts mid-flight: retracting the browser toolbars changes
+   the viewport, which re-lays the whole story out and shifts every target. The
+   ride is therefore re-checked on arrival and corrected if the destination
+   moved while we were travelling to it. */
 function jumpTo(key) {
-  const y = stage.targets[key] ?? 0;
   muteSnap(1800);
-  if (lenis) lenis.scrollTo(y, { duration: 1.5, easing: (x) => 1 - Math.pow(1 - x, 3) });
-  else window.scrollTo({ top: y, behavior: 'smooth' });
+  const target = () => stage.targets[key] ?? 0;
+
+  if (!lenis) { window.scrollTo({ top: target(), behavior: 'smooth' }); return; }
+
+  lenis.scrollTo(target(), {
+    duration: 1.5,
+    easing: (x) => 1 - Math.pow(1 - x, 3),
+    onComplete: () => {
+      const settled = target();
+      if (Math.abs(window.scrollY - settled) > 2) {
+        lenis.scrollTo(settled, { immediate: true, force: true });
+      }
+    }
+  });
 }
 
 for (const el of document.querySelectorAll('[data-jump]')) {
