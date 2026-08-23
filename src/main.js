@@ -184,7 +184,6 @@ for (const el of document.querySelectorAll('[data-jump]')) {
    against that edge for a moment re-anchors, so a continuous scroll walks
    station by station. Inside the contact section the page scrolls normally. */
 
-const COMMIT_THRESHOLD = 0.06;   // share of the gap that counts as "moved on"
 const GESTURE_IDLE = 150;        // ms of quiet that ends a gesture
 const EDGE_DWELL = 200;          // ms pinned on a station before re-anchoring
 
@@ -213,7 +212,9 @@ function armGesture() {
   const y = window.scrollY;
   const stations = stage.stations;
 
-  if (y > stations[stations.length - 1] + 8) {   // contact section: hands off
+  // From the last station onward the contact section scrolls like any normal
+  // page: no clamp, no settling, nothing to fight the form.
+  if (y >= stations[stations.length - 1] - 8) {
     anchorStation = -1;
     clampLow = null;
     clampHigh = null;
@@ -286,10 +287,15 @@ function settleToStation() {
   if (Math.abs(drift) < 2) return;                      // never really left
 
   const next = stations[index + (drift > 0 ? 1 : -1)];
-  if (next === undefined) { glideTo(from); return; }
+  if (next === undefined) return;                       // edge of the story: let it be
   if (Math.abs(y - next) < 2) return;                   // the clamp already landed it
 
-  glideTo(Math.abs(drift) / Math.abs(next - from) > COMMIT_THRESHOLD ? next : from);
+  // Commit on any deliberate movement. A proportional threshold alone made a
+  // short swipe across a long gap read as "no", which pulled the page back the
+  // way it came — the one motion that always feels broken.
+  const gap = Math.abs(next - from);
+  const committed = Math.abs(drift) >= Math.min(48, gap * 0.08);
+  glideTo(committed ? next : from);
 }
 
 function glideTo(y) {
