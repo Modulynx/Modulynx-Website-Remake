@@ -719,7 +719,19 @@ html[lang='ar'] .foot { font-family: var(--font-body); }
 .foot__link:hover { color: var(--ink); }
 /* Sized in em so it tracks the footer text at every breakpoint, and scaled to
    the drawn height of the © glyph beside it rather than the full em box. */
-.foot__link svg { width: 0.8em; height: 0.8em; opacity: 0.85; }
+/* Centring the box is not centring the ink: measured against the rendered
+   pixels the mark sat 0.4px below the © and the label beside it. Nudged up by
+   the same amount, in em so it holds at every size. */
+.foot__link svg {
+  width: 0.8em;
+  height: 0.8em;
+  opacity: 0.85;
+  transform: translateY(-0.04em);
+}
+/* Tajawal and Inter hang their glyphs differently, so the nudge that lands the
+   mark on the ink centre of one leaves it low against the other. Measured per
+   language from the rendered pixels. */
+html[lang='en'] .foot__link svg { transform: translateY(-0.09em); }
 .foot__link:hover svg { opacity: 1; }
 
 /* ══════════════════ DRAGON OVERLAY (scene 6) ══════════════════ */
