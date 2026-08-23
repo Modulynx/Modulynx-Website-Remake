@@ -254,6 +254,37 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .lang:hover { border-color: var(--line-strong); color: var(--ink); }
 
+/* ══════════════════ PAN AFFORDANCE ══════════════════ */
+
+#panHint {
+  position: fixed;
+  inset-block-start: calc(3.6rem + env(safe-area-inset-top));
+  inset-inline: 0;
+  z-index: var(--z-header);
+  margin-inline: auto;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--silver);
+  font-size: 0.76rem;
+  line-height: 1.3;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 420ms var(--ease), transform 420ms var(--ease);
+}
+#panHint[hidden] { display: none; }
+#panHint.is-on { opacity: 1; transform: none; }
+#panHint svg { flex: 0 0 auto; opacity: 0.85; }
+
 /* ══════════════════ VIDEO STAGE ══════════════════ */
 
 #sky, #stage, #overlays {
@@ -789,26 +820,6 @@ html[lang='ar'] .foot { font-family: var(--font-body); }
 @media (max-height: 620px) {
   .ov { padding-block: 4.2rem 1.2rem; }
   .rows .row { padding-block: 0.6rem; }
-}
-
-/* ══════════════════ PHONE FRAMING ══════════════════ */
-
-/* Phones are served 9:16 clips whose sharp band sits in the upper third
-   (see scripts/build-portrait.sh). Keep the hero copy below it so the
-   dragon, the castle and the warriors are never covered by text. */
-@media (orientation: portrait) and (pointer: coarse) {
-  #ov1 {
-    justify-content: flex-end;
-    padding-block-end: clamp(2rem, 8vh, 5rem);
-  }
-  #ov1 .hero__title { font-size: clamp(2.4rem, 9.5vw, 4rem); }
-  #ov1 .hero__sub { margin-block-start: 0.9rem; }
-}
-
-/* A landscape phone crops the same 9:16 file back to a wide strip; nudge the
-   crop window up so it lands on the sharp band rather than the blurred fill. */
-@media (orientation: landscape) and (pointer: coarse) and (max-height: 500px) {
-  #sky video, .layer video { object-position: center 29%; }
 }
 
 /* ══════════════════ REDUCED MOTION ══════════════════ */

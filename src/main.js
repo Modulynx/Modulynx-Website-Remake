@@ -22,35 +22,18 @@ import { applyLang, currentLang, t } from './i18n.js';
 const FORM_ENDPOINT = 'https://formspree.io/f/xdenjjyq';
 const ENDPOINT_IS_PLACEHOLDER = FORM_ENDPOINT.includes('YOUR_FORM_ID');
 
-const VIDEO_FILES = {
-  v1: 'main_bg_scrub.mp4',
-  v2: 'castle_scrub.mp4',
-  v3: 'cave_loop.mp4',
-  v4: 'Warior group.mp4',
-  vSky: 'Background.mp4',
-  vDragon: 'A massive black dragon.mp4'
+const VIDEOS = {
+  v1: 'assets/videos/main_bg_scrub.mp4',
+  v2: 'assets/videos/castle_scrub.mp4',
+  v3: 'assets/videos/cave_loop.mp4',
+  v4: 'assets/videos/Warior group.mp4',
+  vSky: 'assets/videos/Background.mp4',
+  vDragon: 'assets/videos/A massive black dragon.mp4'
 };
 
-/* Touch devices get 9:16 variants. `object-fit: cover` on a portrait phone
-   throws away about 70% of a 16:9 frame — the dragon's wings, the castle
-   silhouette, the warrior line-up all fall outside the viewport. The portrait
-   files carry the full frame in a sharp centre band with a blurred, darkened
-   extension filling the rest, so the screen stays full-bleed and nothing is
-   lost. They are also ~45% lighter, which matters more on a phone.
-
-   The geometry holds in landscape too: cropping a 720x1280 file with `cover`
-   into a landscape phone viewport lands exactly on the sharp band. */
-const screenMin = Math.min(
-  window.screen?.width || window.innerWidth,
-  window.screen?.height || window.innerHeight
-);
-const usePortraitMedia =
-  window.matchMedia('(pointer: coarse)').matches && screenMin <= 820;
-
-const VIDEO_DIR = usePortraitMedia ? 'assets/videos/portrait/' : 'assets/videos/';
-const VIDEOS = Object.fromEntries(
-  Object.entries(VIDEO_FILES).map(([id, file]) => [id, VIDEO_DIR + file])
-);
+/** Native aspect of the story clips, used to work out how much of each frame
+    `object-fit: cover` is currently hiding off the sides. */
+const VIDEO_ASPECT = 1284 / 716;
 
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (sel) => document.querySelector(sel);
@@ -64,7 +47,7 @@ for (const [id, path] of Object.entries(VIDEOS)) {
 }
 
 const scrubVideos = ['v1', 'v2', 'v3', 'v4'].map((id) => document.getElementById(id));
-if (usePortraitMedia) document.getElementById('v1').poster = 'assets/images/poster_hero_portrait.jpg';
+const allVideos = [...scrubVideos, document.getElementById('vSky')];
 const skyVideo = $('#vSky');
 const dragonVideo = $('#vDragon');
 
@@ -133,6 +116,7 @@ async function boot() {
   loaderEl.classList.add('is-done');
   document.body.classList.remove('is-loading');
   setTimeout(() => { loaderEl.hidden = true; }, 800);
+  setTimeout(maybeShowPanHint, 1400);
 }
 
 // Some browsers refuse the silent warm-up until the user has interacted.
@@ -157,7 +141,7 @@ if (!prefersReduced) {
     syncTouch: true,      // the same easing on touch drags
     smoothWheel: true
   });
-  lenis.on('scroll', ({ scroll }) => stage.setScroll(scroll));
+  lenis.on('scroll', ({ scroll }) => { stage.setScroll(scroll); clampScroll(scroll); });
   const raf = (time) => { lenis.raf(time); requestAnimationFrame(raf); };
   requestAnimationFrame(raf);
 }
@@ -189,25 +173,57 @@ for (const el of document.querySelectorAll('[data-jump]')) {
   });
 }
 
-/* ══════════════ 3b. scroll stations ══════════════
+/* ============== 3b. scroll stations ==============
 
-   The film scrubs freely while a finger or wheel is actually moving, but a
-   gesture always comes to rest on a station — a frame where a scene's copy is
-   fully readable, or a key visual beat. One gesture advances at most one
-   station, so no amount of flick force can throw the reader past a block of
-   text. Inside the contact section the page scrolls like any normal page.     */
+   Every scene declares the video times worth resting on: the frames where its
+   copy is fully readable, plus its key visual beats.
 
-const SETTLE_THRESHOLD = 0.14;   // share of the gap that counts as "moved on"
-const GESTURE_IDLE = 160;        // ms of quiet that ends a gesture
+   While a gesture is live the scroll is clamped to the stations either side of
+   where it began, so a violent flick runs *into* the next station and stops
+   dead there - it never sails past and get dragged back. Holding the input
+   against that edge for a moment re-anchors, so a continuous scroll walks
+   station by station. Inside the contact section the page scrolls normally. */
+
+const COMMIT_THRESHOLD = 0.06;   // share of the gap that counts as "moved on"
+const GESTURE_IDLE = 150;        // ms of quiet that ends a gesture
+const EDGE_DWELL = 200;          // ms pinned on a station before re-anchoring
 
 let anchorStation = null;
-let idleTimer = null;
+let clampLow = null;
+let clampHigh = null;
+let pinnedSince = 0;
+let lastInputAt = 0;
+let watchLastY = -1;
+let watchStillFrames = 0;
 let snapMutedUntil = 0;
 
-function muteSnap(ms) {
+function releaseClamp() {
   anchorStation = null;
-  clearTimeout(idleTimer);
+  clampLow = null;
+  clampHigh = null;
+  pinnedSince = 0;
+}
+
+function muteSnap(ms) {
+  releaseClamp();
   snapMutedUntil = performance.now() + ms;
+}
+
+function armGesture() {
+  const y = window.scrollY;
+  const stations = stage.stations;
+
+  if (y > stations[stations.length - 1] + 8) {   // contact section: hands off
+    anchorStation = -1;
+    clampLow = null;
+    clampHigh = null;
+    return;
+  }
+
+  anchorStation = stage.nearestStation(y);
+  clampLow = stations[anchorStation - 1] ?? 0;
+  clampHigh = stations[anchorStation + 1] ?? Number.POSITIVE_INFINITY;
+  pinnedSince = 0;
 }
 
 function beginGesture() {
@@ -215,40 +231,72 @@ function beginGesture() {
   if (!dragonOverlay.hidden) return;
   if (performance.now() < snapMutedUntil) return;
 
+  lastInputAt = performance.now();
+
   if (anchorStation === null) {
-    const y = window.scrollY;
-    const last = stage.stations[stage.stations.length - 1];
-    anchorStation = y > last + 8 ? -1 : stage.nearestStation(y);
+    armGesture();
+    watchLastY = -1;
+    watchStillFrames = 0;
+    requestAnimationFrame(watchGesture);
+  } else if (pinnedSince && performance.now() - pinnedSince > EDGE_DWELL) {
+    armGesture();                                 // walked on to the next station
   }
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(settleToStation, GESTURE_IDLE);
+}
+
+/** Stops momentum exactly on the neighbouring station, so nothing overshoots. */
+function clampScroll(scroll) {
+  if (clampLow === null) return;
+
+  if (scroll > clampHigh) {
+    lenis.scrollTo(clampHigh, { immediate: true, force: true });
+    if (!pinnedSince) pinnedSince = performance.now();
+  } else if (scroll < clampLow) {
+    lenis.scrollTo(clampLow, { immediate: true, force: true });
+    if (!pinnedSince) pinnedSince = performance.now();
+  } else if (Math.abs(scroll - clampHigh) > 1 && Math.abs(scroll - clampLow) > 1) {
+    pinnedSince = 0;
+  }
+}
+
+/** A gesture is over once the input has stopped *and* the page has stopped. */
+function watchGesture() {
+  if (anchorStation === null) return;
+
+  const y = window.scrollY;
+  watchStillFrames = Math.abs(y - watchLastY) < 0.5 ? watchStillFrames + 1 : 0;
+  watchLastY = y;
+
+  if (performance.now() - lastInputAt > GESTURE_IDLE && watchStillFrames >= 3) {
+    settleToStation();
+    return;
+  }
+  requestAnimationFrame(watchGesture);
 }
 
 function settleToStation() {
   const index = anchorStation;
-  anchorStation = null;
+  releaseClamp();
   if (index === null || index < 0) return;
 
   const stations = stage.stations;
   const from = stations[index];
-  const drift = window.scrollY - from;
-  let target = index;
+  const y = window.scrollY;
+  const drift = y - from;
 
-  if (drift !== 0) {
-    const step = drift > 0 ? 1 : -1;
-    const next = stations[index + step];
-    if (next !== undefined && Math.abs(drift) / Math.abs(next - from) > SETTLE_THRESHOLD) {
-      target = index + step;
-    }
-  }
-  glideTo(stations[target]);
+  if (Math.abs(drift) < 2) return;                      // never really left
+
+  const next = stations[index + (drift > 0 ? 1 : -1)];
+  if (next === undefined) { glideTo(from); return; }
+  if (Math.abs(y - next) < 2) return;                   // the clamp already landed it
+
+  glideTo(Math.abs(drift) / Math.abs(next - from) > COMMIT_THRESHOLD ? next : from);
 }
 
 function glideTo(y) {
   const distance = Math.abs(window.scrollY - y);
   if (distance < 2) return;
   snapMutedUntil = performance.now() + 90;
-  const duration = Math.min(1.9, Math.max(0.55, distance / 1500));
+  const duration = Math.min(1.1, Math.max(0.4, distance / 1800));
   if (lenis) lenis.scrollTo(y, { duration, easing: (x) => 1 - Math.pow(1 - x, 3) });
   else window.scrollTo({ top: y, behavior: 'smooth' });
 }
@@ -261,6 +309,103 @@ window.addEventListener('keydown', (event) => {
     beginGesture();
   }
 });
+
+/* ============== 3c. horizontal pan ==============
+
+   On a narrow screen `object-fit: cover` hides the sides of a 16:9 frame.
+   Dragging left or right slides the visible window across the footage while
+   every caption stays exactly where it is. The axis is decided in the first
+   few pixels of a drag and never changes mid-gesture, so vertical intent
+   still scrolls the story. */
+
+const PAN_AXIS_LOCK = 10;        // px of travel before the axis is committed
+
+let panPercent = 50;
+let panOriginX = 0;
+let panOriginY = 0;
+let panFromPercent = 50;
+let panAxis = null;
+let panRange = 0;
+
+/** How many px of frame `cover` is currently hiding off the two sides. */
+function hiddenFrameWidth() {
+  return Math.max(0, window.innerHeight * VIDEO_ASPECT - window.innerWidth);
+}
+
+function applyPan() {
+  const position = panPercent + '% center';
+  for (const video of allVideos) video.style.objectPosition = position;
+}
+
+function onPanStart(event) {
+  if (event.touches.length !== 1) { panAxis = 'skip'; return; }
+  if (event.target.closest('#contact, button, a, input, textarea')) { panAxis = 'skip'; return; }
+
+  panRange = hiddenFrameWidth();
+  if (panRange < 24) { panAxis = 'skip'; return; }
+
+  panAxis = null;
+  panOriginX = event.touches[0].clientX;
+  panOriginY = event.touches[0].clientY;
+  panFromPercent = panPercent;
+}
+
+function onPanMove(event) {
+  if (panAxis === 'skip' || event.touches.length !== 1) return;
+  const touch = event.touches[0];
+
+  if (panAxis === null) {
+    const dx = Math.abs(touch.clientX - panOriginX);
+    const dy = Math.abs(touch.clientY - panOriginY);
+    if (Math.max(dx, dy) < PAN_AXIS_LOCK) return;
+    panAxis = dx > dy * 1.3 ? 'x' : 'y';
+    // Hand the gesture entirely to the pan so the story does not drift.
+    if (panAxis === 'x') { lenis?.stop(); dismissPanHint(); }
+  }
+  if (panAxis !== 'x') return;
+
+  event.preventDefault();
+  const travel = touch.clientX - panOriginX;
+  panPercent = Math.min(100, Math.max(0, panFromPercent - (travel / panRange) * 100));
+  applyPan();
+}
+
+function onPanEnd() {
+  if (panAxis === 'x') lenis?.start();
+  panAxis = null;
+}
+
+window.addEventListener('touchstart', onPanStart, { passive: true });
+window.addEventListener('touchmove', onPanMove, { passive: false });
+window.addEventListener('touchend', onPanEnd, { passive: true });
+window.addEventListener('touchcancel', onPanEnd, { passive: true });
+
+window.addEventListener('resize', () => {
+  if (hiddenFrameWidth() < 24 && panPercent !== 50) { panPercent = 50; applyPan(); }
+});
+
+/* One-time affordance: a hidden gesture nobody knows about is no feature. */
+const panHint = $('#panHint');
+let panHintTimer = null;
+
+function dismissPanHint() {
+  if (!panHint || panHint.hidden) return;
+  panHint.classList.remove('is-on');
+  clearTimeout(panHintTimer);
+  panHintTimer = setTimeout(() => { panHint.hidden = true; }, 400);
+  try { sessionStorage.setItem('modulynx-pan-hint', '1'); } catch { /* ignore */ }
+}
+
+function maybeShowPanHint() {
+  if (!panHint) return;
+  if (!window.matchMedia('(pointer: coarse)').matches) return;
+  if (hiddenFrameWidth() < 60) return;
+  try { if (sessionStorage.getItem('modulynx-pan-hint')) return; } catch { /* ignore */ }
+
+  panHint.hidden = false;
+  requestAnimationFrame(() => panHint.classList.add('is-on'));
+  panHintTimer = setTimeout(dismissPanHint, 5200);
+}
 
 /* ══════════════ 4. language ══════════════ */
 

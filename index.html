@@ -57,6 +57,14 @@
   <button id="langToggle" class="lang" aria-label="Switch to English" data-i18n-attr="aria-label:lang.aria">EN</button>
 </header>
 
+<!-- Pan affordance: shown once per session on touch screens -->
+<div id="panHint" hidden>
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+    <path fill="currentColor" d="M7.7 7.3 3 12l4.7 4.7 1.4-1.4L6.8 13h10.4l-2.3 2.3 1.4 1.4L21 12l-4.7-4.7-1.4 1.4L17.2 11H6.8l2.3-2.3z"/>
+  </svg>
+  <span data-i18n="panHint">اسحب يميناً ويساراً لرؤية المشهد كاملاً</span>
+</div>
+
 <!-- ══════════════ FIXED CINEMATIC STAGE ══════════════ -->
 <!-- Layer 0 (sky) sits behind everything; layers 1-4 crossfade above it. -->
 <div id="sky" aria-hidden="true">

@@ -21,6 +21,7 @@ export const DICT = {
     'hero.sub2': 'كل حل نصنعه سلاح استراتيجي يعمل بدونك.',
     'cta.work': 'الأعمال',
     'cta.start': 'ابدأ مشروعك',
+    'panHint': 'اسحب يميناً ويساراً لرؤية المشهد كاملاً',
 
     's2.eyebrow': 'الاستراتيجية تصنع الفارق',
     's2.lead1': 'في Modulynx البنية تأتي قبل التنفيذ.',
@@ -93,6 +94,7 @@ export const DICT = {
     'hero.sub2': 'Every solution we craft is a strategic weapon that runs without you.',
     'cta.work': 'Our Work',
     'cta.start': 'Start a Project',
+    'panHint': 'Drag sideways to see the whole scene',
 
     's2.eyebrow': 'Strategy Makes the Difference',
     's2.lead1': 'At Modulynx, architecture comes before execution.',
