@@ -36,7 +36,7 @@ export function createStage() {
     // the moments where a scene's copy is fully readable, plus its key visual
     // beats. Nothing ever comes to rest between two of them.
     { key: 's1', video: document.getElementById('v1'), layer: document.getElementById('layer1'), dur: 11.041667, vh: 2.6, crossPrevSec: 0,   stops: [0, 3.4, 10.6] },
-    { key: 's2', video: document.getElementById('v2'), layer: document.getElementById('layer2'), dur: 11.041667, vh: 2.6, crossPrevSec: 2.0, stops: [4.5, 9.6] },
+    { key: 's2', video: document.getElementById('v2'), layer: document.getElementById('layer2'), dur: 11.041667, vh: 2.6, crossPrevSec: 2.0, stops: [4.5] },
     { key: 's3', video: document.getElementById('v3'), layer: document.getElementById('layer3'), dur: 24.0,      vh: 6.0, crossPrevSec: 2.0, stops: [6, 18] },
     // Spec: this crossfade is pinned to cave t=21s→24s, the last 3s of scene 3.
     { key: 's4', video: document.getElementById('v4'), layer: document.getElementById('layer4'), dur: 11.041667, vh: 3.0, crossPrevSec: 3.0, stops: [5.5, 10.8] }
