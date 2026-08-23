@@ -717,7 +717,9 @@ html[lang='ar'] .foot { font-family: var(--font-body); }
   transition: color var(--t-fast) var(--ease);
 }
 .foot__link:hover { color: var(--ink); }
-.foot__link svg { opacity: 0.7; }
+/* Sized in em so it tracks the footer text at every breakpoint, and scaled to
+   the drawn height of the © glyph beside it rather than the full em box. */
+.foot__link svg { width: 0.8em; height: 0.8em; opacity: 0.85; }
 .foot__link:hover svg { opacity: 1; }
 
 /* ══════════════════ DRAGON OVERLAY (scene 6) ══════════════════ */
