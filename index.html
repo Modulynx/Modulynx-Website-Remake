@@ -17,10 +17,15 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- Loaded without blocking first paint; display=swap covers the gap. -->
 <link
   rel="stylesheet"
   href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@400;500;600&display=swap"
+  media="print" onload="this.media='all'"
 />
+<noscript>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@400;500;600&display=swap" />
+</noscript>
 
 <link rel="stylesheet" href="/src/styles.css" />
 </head>
@@ -68,14 +73,14 @@
 <!-- ══════════════ FIXED CINEMATIC STAGE ══════════════ -->
 <!-- Layer 0 (sky) sits behind everything; layers 1-4 crossfade above it. -->
 <div id="sky" aria-hidden="true">
-  <video id="vSky" playsinline muted loop preload="auto" disablepictureinpicture></video>
+  <video id="vSky" playsinline muted loop preload="none" disablepictureinpicture></video>
 </div>
 
 <div id="stage" aria-hidden="true">
   <div class="layer" id="layer1"><video id="v1" playsinline muted preload="auto" disablepictureinpicture poster="assets/images/poster_hero.jpg"></video></div>
-  <div class="layer" id="layer2"><video id="v2" playsinline muted preload="auto" disablepictureinpicture></video></div>
-  <div class="layer" id="layer3"><video id="v3" playsinline muted preload="auto" disablepictureinpicture></video></div>
-  <div class="layer" id="layer4"><video id="v4" playsinline muted preload="auto" disablepictureinpicture></video></div>
+  <div class="layer" id="layer2"><video id="v2" playsinline muted preload="none" disablepictureinpicture></video></div>
+  <div class="layer" id="layer3"><video id="v3" playsinline muted preload="none" disablepictureinpicture></video></div>
+  <div class="layer" id="layer4"><video id="v4" playsinline muted preload="none" disablepictureinpicture></video></div>
   <div class="vignette"></div>
 </div>
 

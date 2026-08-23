@@ -41,10 +41,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* ══════════════ 1. sources ══════════════ */
 
-for (const [id, path] of Object.entries(VIDEOS)) {
-  const el = document.getElementById(id);
-  if (el) el.src = encodeURI(path);
-}
+/* Scene 1 is the only source set now. Everything else is attached after the
+   curtain lifts (see `loadRestInOrder`), so the opening frame gets the whole
+   connection to itself instead of racing four other downloads. */
+document.getElementById('v1').src = encodeURI(VIDEOS.v1);
 
 const scrubVideos = ['v1', 'v2', 'v3', 'v4'].map((id) => document.getElementById(id));
 const allVideos = [...scrubVideos, document.getElementById('vSky')];
@@ -83,46 +83,78 @@ async function warmUp(video) {
   } catch { /* autoplay refused — retried on first gesture */ }
 }
 
+const bufferedSeconds = (video) => (video.buffered.length ? video.buffered.end(0) : 0);
+
+/* The remaining scenes load in story order, each waiting for the one before it
+   so they never compete for the same bandwidth. A scene that stalls does not
+   hold up the rest — the chain moves on after a few seconds either way. If the
+   reader outruns the download, the previous layer simply stays on screen. */
+async function loadRestInOrder() {
+  for (const id of ['v2', 'v3', 'v4', 'vSky']) {
+    const video = document.getElementById(id);
+    video.preload = 'auto';
+    video.src = encodeURI(VIDEOS[id]);
+    video.load();
+    await Promise.race([whenReady(video), sleep(6000)]);
+    warmUp(video);
+    if (id === 'vSky') video.play().catch(() => {});
+  }
+  document.getElementById('vDragon').src = encodeURI(VIDEOS.vDragon);
+}
+
 async function boot() {
-  const jobs = [...scrubVideos.map(whenReady), whenReady(skyVideo)];
-  if (document.fonts) jobs.push(document.fonts.ready);
+  const hero = document.getElementById('v1');
+  const fonts = document.fonts ? document.fonts.ready : Promise.resolve();
 
-  const total = jobs.length;
-  let done = 0;
+  let fontsDone = false;
+  fonts.then(() => { fontsDone = true; });
+
+  // An honest bar: it tracks how much of the opening scene has actually
+  // arrived, rather than creeping on a timer.
   let shown = 0;
-
   const paint = () => {
-    const target = Math.round((done / total) * 100);
-    shown += (target - shown) * 0.35;
-    const value = Math.min(99, Math.round(shown));
+    let target = fontsDone ? 0.12 : 0;
+    if (hero.readyState >= 2) target = 1;
+    else if (hero.duration) target += 0.88 * Math.min(1, bufferedSeconds(hero) / 2.5);
+
+    shown += (target - shown) * 0.18;
+    const value = Math.min(99, Math.round(shown * 100));
     loaderBar.style.width = `${value}%`;
     loaderPct.textContent = `${value}%`;
-    if (value < 99 && done < total) requestAnimationFrame(paint);
+    if (hero.readyState < 2) requestAnimationFrame(paint);
   };
   requestAnimationFrame(paint);
 
-  jobs.forEach((job) => Promise.resolve(job).then(() => { done += 1; }));
-
   // Never hold the curtain for more than 15s, whatever the network does.
-  await Promise.race([Promise.all(jobs.map((j) => Promise.resolve(j))), sleep(15000)]);
+  /* Fonts get a moment so the headline does not visibly swap, but they never
+     hold the curtain: `display=swap` keeps the copy readable either way.
 
-  await Promise.all(scrubVideos.map(warmUp));
-  skyVideo.play().catch(() => {});
+     The whole wait is capped at four seconds. The hero video carries a 36 kB
+     poster of its own first frame, so past that point the opening shot is on
+     screen and correct even while the video is still arriving — far better
+     than staring at a progress bar on a slow connection. */
+  await Promise.race([
+    Promise.all([whenReady(hero), Promise.race([fonts, sleep(1200)])]),
+    sleep(4000)
+  ]);
+  await warmUp(hero);
 
   loaderBar.style.width = '100%';
   loaderPct.textContent = '100%';
-  await sleep(220);
+  await sleep(200);
 
   loaderEl.classList.add('is-done');
   document.body.classList.remove('is-loading');
   setTimeout(() => { loaderEl.hidden = true; }, 800);
   setTimeout(maybeShowPanHint, 1400);
+
+  loadRestInOrder();
 }
 
 // Some browsers refuse the silent warm-up until the user has interacted.
 const retryWarmUp = () => {
-  scrubVideos.forEach(warmUp);
-  skyVideo.play().catch(() => {});
+  for (const video of allVideos) if (video.src) warmUp(video);
+  if (skyVideo.src) skyVideo.play().catch(() => {});
 };
 ['pointerdown', 'touchstart', 'keydown'].forEach((evt) =>
   window.addEventListener(evt, retryWarmUp, { once: true, passive: true })
