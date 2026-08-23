@@ -700,6 +700,27 @@ html[lang='ar'] .field label { font-family: var(--font-body); font-size: 0.9rem;
 html[lang='ar'] .foot { font-family: var(--font-body); }
 .foot__sep { opacity: 0.4; }
 
+.foot__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 32px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--silver);
+  text-decoration: none;
+  transition: color var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease);
+}
+.foot__link:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.06);
+}
+.foot__link svg { opacity: 0.75; }
+
 /* ══════════════════ DRAGON OVERLAY (scene 6) ══════════════════ */
 
 #dragonOverlay {
@@ -875,7 +896,7 @@ html[lang='ar'] .foot { font-family: var(--font-body); }
   .contact__title { font-size: clamp(1.35rem, 6.6vw, 1.9rem); }
   .contact__sub { font-size: 0.8rem; line-height: 1.45; }
   .field textarea { height: 48px; min-height: 48px; }
-  .foot span:not(#year):not(:first-child) { display: none; }
+  .foot > span:not(:first-child) { display: none; }
   .foot__sep { display: none; }
 }
 
