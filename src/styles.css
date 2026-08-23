@@ -691,6 +691,10 @@ html[lang='ar'] .field label { font-family: var(--font-body); font-size: 0.9rem;
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: center;
+  /* Without this the items stretch to the tallest one — the padded link — and
+     the plain text sits at the top of its box while the link centres inside
+     its own, leaving the two on visibly different levels. */
+  align-items: center;
   font-family: var(--font-ui);
   font-size: 0.76rem;
   color: var(--muted);
