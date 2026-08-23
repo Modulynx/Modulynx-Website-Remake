@@ -99,7 +99,21 @@ async function loadRestInOrder() {
     warmUp(video);
     if (id === 'vSky') video.play().catch(() => {});
   }
-  document.getElementById('vDragon').src = encodeURI(VIDEOS.vDragon);
+  warmDragon();
+}
+
+/* The confirmation clip used to be the last thing in the chain, so submitting
+   the form early meant staring at black while 2 MB downloaded. It is now armed
+   as soon as the reader shows any sign of heading for it — reaching the contact
+   section, or touching a field — which is always many seconds before they can
+   press send. Idempotent: whichever signal lands first wins. */
+let dragonArmed = false;
+function warmDragon() {
+  if (dragonArmed) return;
+  dragonArmed = true;
+  dragonVideo.preload = 'auto';
+  if (!dragonVideo.src) dragonVideo.src = encodeURI(VIDEOS.vDragon);
+  dragonVideo.load();
 }
 
 async function boot() {
@@ -489,6 +503,23 @@ function validate() {
   return firstBad;
 }
 
+/* Touching the form is the earliest reliable signal that the confirmation clip
+   will be needed. The section coming into view is the other: an observer is
+   used rather than a scroll threshold because Lenis owns the scroll position,
+   and a programmatic jump can be pulled back before a threshold check sees it. */
+form.addEventListener('focusin', warmDragon, { once: true });
+form.addEventListener('pointerdown', warmDragon, { once: true });
+
+if ('IntersectionObserver' in window) {
+  const contactWatcher = new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) {
+      warmDragon();
+      contactWatcher.disconnect();
+    }
+  }, { rootMargin: '300px' });
+  contactWatcher.observe(document.getElementById('contact'));
+}
+
 // Validate on blur, not on every keystroke.
 for (const input of form.querySelectorAll('input')) {
   input.addEventListener('blur', () => { if (input.value.trim()) validate(); });
@@ -562,6 +593,7 @@ function showSentNote() {
 const dragonOverlay = $('#dragonOverlay');
 const dragonClose = $('#dragonClose');
 let lastFocused = null;
+let dragonStallTimer = null;
 
 function openDragon() {
   lastFocused = document.activeElement;
@@ -577,10 +609,21 @@ function openDragon() {
   // The only play() in the project — triggered by a click, so it is never blocked.
   dragonVideo.play().catch(() => dragonOverlay.classList.add('is-ended'));
 
+  // If the clip cannot start within a couple of seconds — a cold cache on a
+  // slow link — the poster is already showing the right frame, so promote the
+  // way out rather than leaving the reader waiting on a video that may not come.
+  clearTimeout(dragonStallTimer);
+  dragonStallTimer = setTimeout(() => {
+    if (dragonVideo.paused || dragonVideo.readyState < 3) {
+      dragonOverlay.classList.add('is-ended');
+    }
+  }, 2500);
+
   dragonClose.focus({ preventScroll: true });
 }
 
 function closeDragon() {
+  clearTimeout(dragonStallTimer);
   dragonOverlay.classList.remove('is-in');
   dragonOverlay.classList.add('is-out');
   dragonVideo.pause();
