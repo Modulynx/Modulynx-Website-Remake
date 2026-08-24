@@ -36,7 +36,7 @@ const ENDPOINT_IS_PLACEHOLDER = FORM_ENDPOINT.includes('YOUR_FORM_ID');
    them from the site itself, which is right for local development
    and for any host with range support.
    ──────────────────────────────────────────────────────────── */
-const VIDEO_BASE = '';   // e.g. 'https://pub-xxxx.r2.dev'
+const VIDEO_BASE = 'https://pub-18781ca784f14a6d817e5f3141cea88e.r2.dev';
 
 const VIDEO_FILES = {
   v1: 'main_bg_scrub.mp4',
