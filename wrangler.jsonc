@@ -5,7 +5,9 @@
   //
   // Pages does not read this file — it takes the build command and output
   // directory from its own settings — so keeping it costs nothing there.
-  "name": "modulynx",
+  // Matches the dashboard project name, and stays clear of the Pages project
+  // that already holds "modulynx".
+  "name": "modulynx-website-remake",
   "compatibility_date": "2026-08-24",
   "assets": {
     "directory": "./dist",
