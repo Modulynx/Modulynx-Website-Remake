@@ -14,3 +14,12 @@ if (!existsSync(from)) {
 // Ship the optimised videos only; the unprocessed masters stay local.
 cpSync(from, to, { recursive: true, filter: (src) => !src.includes('_originals') });
 console.log('[copy-assets] assets/ -> dist/assets (originals excluded)');
+
+// Cloudflare Pages reads its cache rules from a _headers file in the published
+// directory. Netlify takes the same policy from netlify.toml, so shipping both
+// keeps either host correct without a second source of truth to maintain.
+const headers = resolve(root, '_headers');
+if (existsSync(headers)) {
+  cpSync(headers, resolve(root, 'dist/_headers'));
+  console.log('[copy-assets] _headers -> dist/_headers');
+}

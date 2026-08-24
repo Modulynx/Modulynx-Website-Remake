@@ -36,8 +36,15 @@ npm run preview   # serve the production build locally
 GitHub Pages or any static host. `base: './'` in `vite.config.js` keeps it
 working from a sub-path, so a GitHub Pages project URL needs no rebuild.
 
-Netlify picks up `netlify.toml` automatically: build `npm run build`, publish
-`dist`, Node 22, plus long-lived cache headers for the video.
+Both hosts are configured. Netlify reads `netlify.toml`; Cloudflare Pages reads
+the `_headers` file the build copies into `dist`. Either way: build
+`npm run build`, publish `dist`, Node 22 (pinned in `.nvmrc`), with long-lived
+cache headers on the video.
+
+A note on picking one: this site ships ~51 MB of video and gets iterated on, so
+the two limits that bite are build count and bandwidth. Netlify's free tier
+meters both from one credit pool — roughly twenty deploys a month — while
+Cloudflare Pages allows 500 builds and does not meter Pages bandwidth.
 
 ---
 

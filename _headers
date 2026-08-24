@@ -1,0 +1,18 @@
+# Cache rules for Cloudflare Pages — the same policy netlify.toml carries, in
+# the format Cloudflare reads. Copied into dist/ by scripts/copy-assets.mjs.
+
+# Vite fingerprints the bundle, so these filenames change on every build.
+/assets/index-*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The story clips are the bulk of the site and their names are stable.
+# Shorten this window before re-encoding them.
+/assets/videos/*
+  Cache-Control: public, max-age=2592000
+
+/assets/images/*
+  Cache-Control: public, max-age=2592000
+
+# Single entry document — always revalidate so a new deploy is picked up.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
