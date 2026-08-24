@@ -22,14 +22,37 @@ import { applyLang, currentLang, t } from './i18n.js';
 const FORM_ENDPOINT = 'https://formspree.io/f/xdenjjyq';
 const ENDPOINT_IS_PLACEHOLDER = FORM_ENDPOINT.includes('YOUR_FORM_ID');
 
-const VIDEOS = {
-  v1: 'assets/videos/main_bg_scrub.mp4',
-  v2: 'assets/videos/castle_scrub.mp4',
-  v3: 'assets/videos/cave_loop.mp4',
-  v4: 'assets/videos/Warior group.mp4',
-  vSky: 'assets/videos/Background.mp4',
-  vDragon: 'assets/videos/A massive black dragon.mp4'
+/* ────────────────────────────────────────────────────────────
+   WHERE THE VIDEO IS SERVED FROM
+
+   Scroll scrubbing needs byte-range requests: jumping to a frame
+   sixteen seconds in has to fetch that part of the file, not the
+   whole thing. A host that answers a Range header with the entire
+   file leaves the longest clip frozen on its first frame until all
+   19 MB have arrived — measured at over thirty seconds on 4G.
+
+   Cloudflare's static asset serving does not answer ranges, so the
+   clips live on object storage that does. Leave this empty to serve
+   them from the site itself, which is right for local development
+   and for any host with range support.
+   ──────────────────────────────────────────────────────────── */
+const VIDEO_BASE = '';   // e.g. 'https://pub-xxxx.r2.dev'
+
+const VIDEO_FILES = {
+  v1: 'main_bg_scrub.mp4',
+  v2: 'castle_scrub.mp4',
+  v3: 'cave_loop.mp4',
+  v4: 'Warior group.mp4',
+  vSky: 'Background.mp4',
+  vDragon: 'A massive black dragon.mp4'
 };
+
+const VIDEOS = Object.fromEntries(
+  Object.entries(VIDEO_FILES).map(([id, file]) => [
+    id,
+    VIDEO_BASE ? `${VIDEO_BASE.replace(/\/$/, '')}/${file}` : `assets/videos/${file}`
+  ])
+);
 
 /** Native aspect of the story clips, used to work out how much of each frame
     `object-fit: cover` is currently hiding off the sides. */
