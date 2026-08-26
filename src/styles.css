@@ -486,10 +486,10 @@ html[lang='ar'] .eyebrow { letter-spacing: 0.08em; font-size: 0.86rem; text-tran
 .point__body strong { font-weight: 700; font-size: 1.02rem; }
 .point__body em { font-style: normal; color: var(--muted); font-size: 0.94rem; line-height: 1.7; text-wrap: pretty; }
 
-/* ── cave entrance (scene 3) ── */
+/* ── quiet beats between the panels ── */
 /* Deliberately lighter than a panel: this is a whisper on the way past, not a
    block of copy to stop and read. */
-.cavehint {
+.beat {
   display: grid;
   justify-items: center;
   gap: 0.7rem;
@@ -498,7 +498,7 @@ html[lang='ar'] .eyebrow { letter-spacing: 0.08em; font-size: 0.86rem; text-tran
   max-width: min(37rem, 88vw);
   text-align: center;
 }
-.cavehint__lead {
+.beat__lead {
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(1.1rem, 3.4vw, 1.6rem);
@@ -506,8 +506,8 @@ html[lang='ar'] .eyebrow { letter-spacing: 0.08em; font-size: 0.86rem; text-tran
   color: var(--ink);
   text-shadow: 0 6px 30px rgba(0, 0, 0, 0.9);
 }
-html[lang='ar'] .cavehint__lead { line-height: 1.7; }
-.cavehint__drag {
+html[lang='ar'] .beat__lead { line-height: 1.7; }
+.beat__drag {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -523,10 +523,10 @@ html[lang='ar'] .cavehint__lead { line-height: 1.7; }
   font-size: 0.76rem;
   line-height: 1.3;
 }
-html[lang='ar'] .cavehint__drag { font-family: var(--font-body); font-size: 0.84rem; }
-.cavehint__drag svg { flex: 0 0 auto; opacity: 0.8; }
+html[lang='ar'] .beat__drag { font-family: var(--font-body); font-size: 0.84rem; }
+.beat__drag svg { flex: 0 0 auto; opacity: 0.8; }
 /* Nothing to pan on a wide screen, so the instruction would be a lie there. */
-.cavehint__drag[hidden] { display: none; }
+.beat__drag[hidden] { display: none; }
 
 /* ── service rows (scene 3a) ── */
 .rows { margin: 0; padding: 0; list-style: none; display: grid; }

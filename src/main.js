@@ -476,10 +476,10 @@ window.addEventListener('resize', () => {
   if (hiddenFrameWidth() < 24 && panPercent !== 50) { panPercent = 50; applyPan(); }
 });
 
-/* The cave caption offers a sideways drag. Panning is a touch gesture, and on
+/* The cave beat offers a sideways drag. Panning is a touch gesture, and on
    a wide screen there is little hidden to drag to anyway — on a desktop the
    line would be an instruction the reader cannot follow, so it steps aside. */
-const caveDrag = $('.cavehint__drag');
+const caveDrag = $('.beat__drag');
 function syncCaveHint() {
   if (!caveDrag) return;
   const canPan = window.matchMedia('(pointer: coarse)').matches && hiddenFrameWidth() >= 60;
