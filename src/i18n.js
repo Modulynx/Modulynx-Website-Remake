@@ -33,6 +33,8 @@ export const DICT = {
     's2.p3t': 'منتجات تدوم',
     's2.p3d': 'قابل للتوسع — يعمل اليوم وينمو غداً.',
 
+    'cave.lead': 'تمهّل. الكهف يخفي أكثر مما يُظهر.',
+    'cave.drag': 'اسحب يميناً ويساراً لتتفحّص الجدران',
     's3a.title': 'ما نبنيه لك',
     's3a.r1t': 'مسارات الأتمتة',
     's3a.r1d': 'n8n وMake وZapier — نوحّد عملياتك.',
@@ -106,6 +108,8 @@ export const DICT = {
     's2.p3t': 'Products That Last',
     's2.p3d': 'Scales today, scales tomorrow.',
 
+    'cave.lead': 'Slow down. The cave keeps more than it shows.',
+    'cave.drag': 'Drag sideways to search the walls',
     's3a.title': 'What We Build',
     's3a.r1t': 'Automation Pipelines',
     's3a.r1d': 'n8n, Make and Zapier — we unify your operations and give you back your time.',
