@@ -34,7 +34,7 @@ export const DICT = {
     's2.p3d': 'قابل للتوسع — يعمل اليوم وينمو غداً.',
 
     'beat.reveal': 'هناك — حيث تتحوّل الفكرة إلى بنيان.',
-    'beat.closer': 'من بعيد حجر. من قريب، هندسة.',
+    'beat.closer': 'من بعيد حجر. من قريب، نظام.',
     'cave.lead': 'تمهّل. الكهف يخفي أكثر مما يُظهر.',
     'cave.drag': 'اسحب يميناً ويساراً لتتفحّص الجدران',
     's3a.title': 'ما نبنيه لك',
@@ -111,7 +111,7 @@ export const DICT = {
     's2.p3d': 'Scales today, scales tomorrow.',
 
     'beat.reveal': 'There — where an idea becomes structure.',
-    'beat.closer': 'Stone from a distance. Engineering up close.',
+    'beat.closer': 'Stone from a distance. A system up close.',
     'cave.lead': 'Slow down. The cave keeps more than it shows.',
     'cave.drag': 'Drag sideways to search the walls',
     's3a.title': 'What We Build',
