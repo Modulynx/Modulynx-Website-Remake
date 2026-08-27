@@ -65,7 +65,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /* ══════════════ 1. sources ══════════════ */
 
 /* Scene 1 is the only source set now. Everything else is attached after the
-   curtain lifts (see `loadRestInOrder`), so the opening frame gets the whole
+   curtain lifts (see `manageDecoders`), so the opening frame gets the whole
    connection to itself instead of racing four other downloads. */
 document.getElementById('v1').src = encodeURI(VIDEOS.v1);
 
@@ -108,28 +108,41 @@ async function warmUp(video) {
 
 const bufferedSeconds = (video) => (video.buffered.length ? video.buffered.end(0) : 0);
 
-/* The remaining scenes load in story order, each waiting for the one before it
-   so they never compete for the same bandwidth. A scene that stalls does not
-   hold up the rest — the chain moves on after a few seconds either way. If the
-   reader outruns the download, the previous layer simply stays on screen. */
-async function loadRestInOrder() {
-  for (const id of ['v2', 'v3', 'v4', 'vSky']) {
+/* Keep only the scenes around the reader attached.
+
+   A budget phone exposes a handful of hardware video decoders. Ask for more
+   and the ones it cannot serve fail silently — a frozen frame, no error, and
+   it only shows on a cold load because a warm cache changes the timing. Six
+   elements were live at once from the second scene onward; this holds it to
+   three.
+
+   One scene of slack in each direction means the next one is always arriving
+   before it is needed, and releasing a scene costs only a cache read to bring
+   it back. */
+const SCRUB_IDS = ['v1', 'v2', 'v3', 'v4'];
+
+function manageDecoders() {
+  if (document.body.classList.contains('is-loading')) return;
+  const active = stage.activeScene();
+
+  SCRUB_IDS.forEach((id, index) => {
     const video = document.getElementById(id);
-    video.preload = 'auto';
-    video.src = encodeURI(VIDEOS[id]);
-    video.load();
-    await Promise.race([whenReady(video), sleep(6000)]);
-    warmUp(video);
-    if (id === 'vSky') video.play().catch(() => {});
-  }
-  warmDragon();
+    const distance = Math.abs(index - active);
+    if (distance <= 1 && !video.src) {
+      video.preload = 'auto';
+      video.src = encodeURI(VIDEOS[id]);
+      video.load();
+      warmUp(video);
+    } else if (distance >= 2 && video.src) {
+      video.removeAttribute('src');
+      video.load();
+    }
+  });
 }
 
-/* The confirmation clip used to be the last thing in the chain, so submitting
-   the form early meant staring at black while 2 MB downloaded. It is now armed
-   as soon as the reader shows any sign of heading for it — reaching the contact
-   section, or touching a field — which is always many seconds before they can
-   press send. Idempotent: whichever signal lands first wins. */
+/* The confirmation clip used to be the last thing loaded, so submitting the
+   form early meant staring at black while it downloaded. It is armed as soon
+   as the reader shows any sign of heading for it. */
 let dragonArmed = false;
 function warmDragon() {
   if (dragonArmed) return;
@@ -137,6 +150,19 @@ function warmDragon() {
   dragonVideo.preload = 'auto';
   if (!dragonVideo.src) dragonVideo.src = encodeURI(VIDEOS.vDragon);
   dragonVideo.load();
+}
+
+/* The sky loops continuously behind the contact scene, so it holds a decoder
+   open for as long as it is attached — and it is not seen until the story
+   ends. It waits with the confirmation clip. */
+let skyArmed = false;
+function warmSky() {
+  if (skyArmed) return;
+  skyArmed = true;
+  skyVideo.preload = 'auto';
+  if (!skyVideo.src) skyVideo.src = encodeURI(VIDEOS.vSky);
+  skyVideo.load();
+  skyVideo.play().catch(() => {});
 }
 
 async function boot() {
@@ -185,13 +211,16 @@ async function boot() {
   setTimeout(() => { loaderEl.hidden = true; }, 800);
   setTimeout(maybeShowPanHint, 1400);
 
-  loadRestInOrder();
+  // The opening scene had the connection to itself; from here the window
+  // manager brings the next one in, and each one after it as the reader
+  // approaches, so nothing far away ever holds a decoder open.
+  manageDecoders();
 }
 
 // Some browsers refuse the silent warm-up until the user has interacted.
 const retryWarmUp = () => {
   for (const video of allVideos) if (video.src) warmUp(video);
-  if (skyVideo.src) skyVideo.play().catch(() => {});
+  if (skyVideo.src && skyVideo.paused) skyVideo.play().catch(() => {});
 };
 ['pointerdown', 'touchstart', 'keydown'].forEach((evt) =>
   window.addEventListener(evt, retryWarmUp, { once: true, passive: true })
@@ -564,12 +593,23 @@ form.addEventListener('pointerdown', warmDragon, { once: true });
 if ('IntersectionObserver' in window) {
   const contactWatcher = new IntersectionObserver((entries) => {
     if (entries.some((entry) => entry.isIntersecting)) {
+      warmSky();
       warmDragon();
       contactWatcher.disconnect();
     }
-  }, { rootMargin: '300px' });
+  }, { rootMargin: '600px' });
   contactWatcher.observe(document.getElementById('contact'));
 }
+
+// Cheap, and only acts when the active scene has actually changed.
+let lastManagedScene = -1;
+setInterval(() => {
+  const active = stage.activeScene();
+  if (active !== lastManagedScene) {
+    lastManagedScene = active;
+    manageDecoders();
+  }
+}, 400);
 
 // Validate on blur, not on every keystroke.
 for (const input of form.querySelectorAll('input')) {

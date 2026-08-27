@@ -74,6 +74,10 @@ export function createStage() {
 
   let scrollY = 0;
   let dirty = true;
+  /* Which scene is carrying the picture. Budget phones expose only a handful
+     of hardware video decoders, so the loader uses this to keep the ones far
+     from the reader detached rather than all six alive at once. */
+  let activeScene = 0;
 
   /* ── geometry ─────────────────────────────────────────── */
 
@@ -182,6 +186,11 @@ export function createStage() {
       if (i > 0) s.layer.style.opacity = s.alpha;
     }
 
+    activeScene = 0;
+    for (let i = scenes.length - 1; i >= 0; i--) {
+      if (scenes[i].alpha > 0.5) { activeScene = i; break; }
+    }
+
     // 4. scrub — only for layers actually contributing pixels
     if (stageAlpha > 0.002) {
       for (let i = 0; i < scenes.length; i++) {
@@ -257,6 +266,7 @@ export function createStage() {
 
   return {
     start, layout, setScroll, targets, scenes, stations, nearestStation,
+    activeScene: () => activeScene,
     invalidate: () => { dirty = true; }
   };
 }
