@@ -864,8 +864,24 @@ html[lang='en'] .foot__link svg { transform: translateY(-0.09em); }
   .nav__link { padding: 0.6rem 0.55rem; font-size: 0.8rem; }
   .nav__cta { padding: 0.5rem 0.9rem; font-size: 0.8rem; }
   .brand__word { display: none; }
-  .panel--team { grid-template-columns: 1fr; justify-items: center; text-align: center; }
-  .team__media { width: min(160px, 45vw); }
+  /* Stacked, the founder card is the tallest thing in the story and was
+     running past the bottom of the screen — the closing line of the bio and
+     the profile links with it. Every part gives up a little. */
+  .panel--team {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    gap: 0.6rem;
+    padding: 0.9rem;
+  }
+  .team__media { width: min(112px, 30vw); }
+  .panel--team .eyebrow { margin-block-end: 0.4rem; }
+  .team__name { font-size: clamp(1.5rem, 6vw, 2rem); margin-block-end: 0.5rem; }
+  .panel--team .pills { gap: 0.3rem; margin-block-end: 0.55rem; }
+  .panel--team .pill { font-size: 0.64rem; padding: 0.24rem 0.6rem; }
+  .team__bio { font-size: 0.85rem; line-height: 1.58; margin-block-end: 0.55rem; }
+  .panel--team .socials { gap: 0.45rem; }
+  .panel--team .socials a { padding: 0.35rem 0.8rem; font-size: 0.75rem; }
   .panel--team .pills, .panel--team .socials { justify-content: center; }
   .ov--edge { align-items: center; }
   .ov--edge .panel { margin-inline: 0; }
